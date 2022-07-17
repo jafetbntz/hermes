@@ -1,9 +1,9 @@
 FROM python:3.8.5-slim
 
-COPY ./src /srv/books_app
-COPY ./requirements.txt /srv/books_app/requirements.txt
+COPY ./src /srv/snapshot_service
+COPY ./requirements.txt /srv/snapshot_service/requirements.txt
 
-WORKDIR /srv/books_app
+WORKDIR /srv/snapshot_service
 
 RUN apt-get clean \
     && apt-get -y update
@@ -18,6 +18,9 @@ RUN pip install uwsgi
 COPY nginx/nginx.conf /etc/nginx
 
 RUN chmod +x ./start.sh
+
+RUN mkdir -p /var/www/html/pictures
+RUN chmod 7555 /var/www/html/pictures
 
 EXPOSE 80
 

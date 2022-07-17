@@ -1,6 +1,6 @@
 version: "3.8"
 services: 
-  ws:
+  ws_service:
     env_file: .env
     build: ./service
     restart: always
@@ -8,6 +8,18 @@ services:
       - "80:80"
     depends_on:
       - redis
+    volumes:
+    - map_snapshots:/var/www/html/pictures
+
+  worker:
+    env_file: .env
+    build: ./worker
+    restart: always
+    scale: 3
+    depends_on:
+      - redis
+    volumes:
+    - map_snapshots:/var/www/html/pictures
 
   redis:
     image: redis:4.0.6-alpine
@@ -19,3 +31,5 @@ services:
 volumes:
   cache:
     driver: local
+  map_snapshots:
+    external: false

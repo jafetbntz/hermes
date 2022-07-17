@@ -1,10 +1,14 @@
+import json
 import os
-from flask import Flask, abort, request
-from helpers.get_map_with_mapbox import get_mapbox_snapshot
+from flask import Flask, Response, abort, request
+from redis import Redis
 
-from helpers.map_requests import MapSnapshotRequest
+from map_requests import MapSnapshotRequest
+    
+redis_client = Redis(host='redis', port=6379)
 
-MAPBOX_TOKEN = os.environ.get('MAPBOX_TOKEN')
+PICTURES_FOLDER_PATH = '/var/www/html/pictures'
+SNAPSHOTS_QUEUE_KEY = 'queue:snapshot_reques'
 
 app = Flask(__name__)
 
@@ -14,11 +18,21 @@ def info():
 
     return {
         "service": "Hermes | Map Snapshots Service",
-        "powered_by": "Carbono 14"
+        "powered_by": "Carbono 14",
+        "queue": redis_client.llen(SNAPSHOTS_QUEUE_KEY)
     }
 
 
-@app.post("/snaphot")
+@app.get("/snaphots")
+def get_snapshots():
+    arr = os.listdir(PICTURES_FOLDER_PATH)
+
+    return json.dumps({
+        "result": arr
+    })
+
+
+@app.post("/snaphots")
 def new_snapshot():
     result = {
         "success": False
@@ -28,12 +42,12 @@ def new_snapshot():
     
     if not snap_request['coordinates']:
         result['message'] = 'INVALID_PARAMETERS'
-        abort(400, result)
+        abort(400, Response(result))
 
     points = [(p['lat'], p['lng'])  for p in snap_request['coordinates']]
     snapshot = MapSnapshotRequest(
         points=points,
-        base_folder=os.environ.get('PICTURES_FOLDER_PATH', '/var/www/html/pictures')
+        base_folder=PICTURES_FOLDER_PATH
     )
 
     if snap_request.get('width') != None:
@@ -57,17 +71,19 @@ def new_snapshot():
 
     if not snapshot.is_valid():
         result['message'] = 'INVALID_PARAMETERS'
-        abort(400, result)
+        abort(400, Response(result))
 
 
     try:
-        snap_url = get_mapbox_snapshot(snapshot, MAPBOX_TOKEN)
-        result['snapshot_url'] = snap_url
-        result["success"] = True
+
+        
+        redis_client.lpush(SNAPSHOTS_QUEUE_KEY,snapshot.json())
+        result['success'] = True
+
     except Exception as e:
-        print(e)
+        print('[ERROR] - ', e)
         result['message'] = 'INTERNAL_ERROR'
-        abort(500, result)
+        abort(500, Response(result))
 
 
     return result
