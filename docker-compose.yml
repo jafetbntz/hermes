@@ -1,0 +1,21 @@
+version: "3.8"
+services: 
+  ws:
+    env_file: .env
+    build: ./service
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:4.0.6-alpine
+    ports:
+      - "6379:6379"
+
+    volumes: 
+      - cache:/data
+volumes:
+  cache:
+    driver: local
