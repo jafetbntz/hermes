@@ -44,7 +44,12 @@ def _handle_queue(conn):
         
     map_url = get_mapbox_snapshot(snapshot, MAPBOX_TOKEN)
     print('🚀 ~ file: worker.py ~ line 48 ~ map_url', map_url)
-
+    if map_url != None:
+        ## TODO: Notify the generation of the snapshot through some push notification service and/or some WebSocket channel 
+        pass
+    else:
+        ## Notify failure to internal Team
+        pass
 
 
 if __name__ == "__main__":
